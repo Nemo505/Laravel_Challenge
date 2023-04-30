@@ -11,7 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        //
+        Schema::create('payrolls', function (Blueprint $table) {
+            $table->increments('id');  
+            $table->foreign('staff_id')->references('id')->on('staffs')->onDelete('cascade');
+            $table->string('total_days');
+            $table->string('basic_salary')->nullable();
+            $table->string('monthly_salary')->nullable();
+            $table->rememberToken();
+            $table->timestamps();
+        });
     }
 
     /**
