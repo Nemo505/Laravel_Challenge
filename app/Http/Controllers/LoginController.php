@@ -5,56 +5,41 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth; 
+use Validator;
 
 class LoginController extends Controller
 {
     public function login(Request $request)
     {
-        if (! $request->email) {
-            return response()->json([
-                'status' => 422,
-                'message' => 'email is required',
-            ]);
-        }
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+            'password' => 'required|string|min:6',
+         ]);
 
-        if (strlen($request->email) < 6) {
-            return response()->json([
-                'status' => 422,
-                'message' => 'email is invalid',
-            ]);
-        }
+        $credentials = $request->only('email', 'password');
 
-        if (! $request->password) {
-            return response()->json([
-                'status' => 422,
-                'message' => 'password is required',
-            ]);
-        }
-        if (strlen($request->password) < 8) {
-            return response()->json([
-                'status' => 422,
-                'message' => 'password is invalid',
-            ]);
-        }
+        if ($validator->fails()) {
+            return apiResponse('Validation Error', $validator->errors()->all(), 422);
 
-        $user = User::where('email', $request->email)->first();
-        if (! $user) {
-            return response()->json([
-                'status' => 404,
-                'message' => 'Model not found.',
-            ]);
-        }
+        }else{
 
-        if (! Hash::check($request->password, $user->password)) {
-            return response()->json([
-                'status' => 404,
-                'message' => 'Invalid credentials',
-            ]);
-        }
+            $user = User::where('email', $request->email)->first();
+                if (!$token = $user) {
+                    return apiResponse("Unauthorized", $token, 401);
+                }else{
+                    $token = Auth::attempt($credentials);
+                    if ($token == false) {
+                        return apiResponse("Password Does Not Match", $token, 401);
+                    } else {
+                        $user_token = [
+                            'user' => $user,
+                            'token' => $user->createToken('User-Token')->plainTextToken,
+                        ];
+                        return apiResponse("User Logged In Successfully", $user_token, 200);
+                    }
 
-        return response()->json([
-            'user' => $user,
-            'token' => $user->createToken('User-Token')->plainTextToken,
-        ]);
+                }
+        }
     }
 }
